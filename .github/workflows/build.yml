@@ -1,0 +1,33 @@
+name: Build package
+
+on: [ push, pull_request, workflow_dispatch ]
+
+jobs:
+  build_pkg:
+    runs-on: ubuntu-24.04
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install mingw
+      run: |
+        sudo apt update
+        sudo apt install -y gcc-mingw-w64-i686 gcc-mingw-w64-x86-64
+
+    - name: Set env vars
+      run: |
+        echo "sha_name=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_ENV
+
+    - name: Build
+      run: |
+        bash build.sh
+
+    - name: Push package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: beamng_proton_vr_shim_${{ env.sha_name }}
+        path: |
+           MinHook.x64.dll
+           dxgi.dll
+        if-no-files-found: error
