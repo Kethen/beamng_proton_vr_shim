@@ -13,7 +13,7 @@ jobs:
     - name: Install mingw
       run: |
         sudo apt update
-        sudo apt install -y gcc-mingw-w64-i686 gcc-mingw-w64-x86-64
+        sudo apt install -y g++-mingw-w64 gcc-mingw-w64
 
     - name: Set env vars
       run: |
