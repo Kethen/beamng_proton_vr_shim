@@ -117,7 +117,7 @@ int WINAPI xrGetVulkanDeviceExtensionsKHR_hooked(void *instance, void *systemId,
 	int WINAPI (*xrGetVulkanDeviceExtensionsKHR_orig)(void *instance, void *systemId, uint32_t bufferCapacityInput, uint32_t *bufferCountOutput, char *buffer) = (int WINAPI (*)(void *instance, void *systemId, uint32_t bufferCapacityInput, uint32_t *bufferCountOutput, char *buffer))map_entry->second;
 	int result = xrGetVulkanDeviceExtensionsKHR_orig(instance, systemId, bufferCapacityInput, bufferCountOutput, buffer);
 	if (result == 0){
-		LOG("%s: removing openxr required vulkan features\n", __func__);
+		LOG("%s: xrGetVulkanDeviceExtensionsKHR returning no feature\n", __func__);
 		*bufferCountOutput = 0;
 	}
 	return result;
