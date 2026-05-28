@@ -18,7 +18,8 @@
 #include <map>
 
 #include "log.h"
-#include "dxgi.h"
+#include "dxgi_redirect.h"
+#include "dinput8_redirect.h"
 
 #define STR(s) #s
 
@@ -124,6 +125,7 @@ __attribute__((constructor))
 int init(){
 	init_log();
 	dxgi_fetch_prog();
+	dinput8_fetch_prog();
 
 	init_minhook();
 	hook_functions();

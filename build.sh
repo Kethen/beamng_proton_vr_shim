@@ -6,7 +6,7 @@ CPPC=x86_64-w64-mingw32-g++
 BUILD_FLAGS="-Wformat -fPIC -O0 -g -Iminhook_prebuilt/include"
 LINK_FLAGS="-static -shared -Wl,-Bdynamic -Lminhook_prebuilt/bin -lMinHook.x64 -Wl,-Bstatic -lstdc++"
 
-C_SRC="log dxgi"
+C_SRC="log dxgi dinput8"
 CPP_SRC="main"
 
 OBJS=""
@@ -26,3 +26,5 @@ done
 $CPPC $LINK_FLAGS $OBJS -o dxgi.dll
 
 cp minhook_prebuilt/bin/MinHook.x64.dll ./
+cp dxgi.dll beamng_proton_vr_shim.asi
+cp dxgi.dll dinput8.dll
