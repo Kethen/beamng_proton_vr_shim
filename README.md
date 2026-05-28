@@ -2,4 +2,4 @@
 
 https://github.com/GloriousEggroll/proton-ge-custom/pull/106 in shim form
 
-Place dxgi.dll and MinHook.x64.dll next to Bin64/BeamNG.drive.x64.exe
+This shim removes `VK_WINE_openxr_device_extensions` from `xrGetVulkanDeviceExtensionsKHR` calls, so that it does not confuse Vulkan OpenXR games when used under proton.
