@@ -17,7 +17,9 @@
 
 #include <map>
 
-#define LOG_FILE "./beamng_proton_vr_shim.log"
+#include "log.h"
+#include "dxgi.h"
+
 #define STR(s) #s
 
 #define HOOK(name) { \
@@ -76,35 +78,6 @@
 	LOG("%s: hooked %ls %s\n", __func__, mod_name, STR(name)); \
 }
 
-void init_log(){
-	FILE *log_file = fopen(LOG_FILE, "wb");
-	if(log_file != NULL){
-		fclose(log_file);
-	}
-}
-
-void LOG(const char *fmt, ...){
-	FILE *log_file = fopen(LOG_FILE, "ab");
-	if (log_file == NULL){
-		printf("log file open failed\n");
-		return;
-	}
-
-	va_list args;
-	va_start(args, fmt);
-	vfprintf(log_file, fmt, args);
-	va_end(args);
-
-	fclose(log_file);
-}
-
-static HRESULT __stdcall (*CreateDXGIFactory1_real)(REFIID riid, void **ppFactory) = NULL;
-extern "C" {
-HRESULT __stdcall CreateDXGIFactory1(REFIID riid, void **ppFactory){
-	return CreateDXGIFactory1_real(riid, ppFactory);
-}
-}
-
 std::map<void *, void *> xrGetVulkanDeviceExtensionsKHR_map;
 
 // based on the findings of https://github.com/GloriousEggroll/proton-ge-custom/commit/a5a79f5b9d46fb3e02823d8653e91dd12496d3c7
@@ -150,22 +123,7 @@ void init_minhook(){
 __attribute__((constructor))
 int init(){
 	init_log();
-
-	char win_dir[1024] = {0};
-	GetWindowsDirectoryA(win_dir, sizeof(win_dir) - 1);
-	char dll_path[1024] = {0};
-
-	sprintf(dll_path, "%s\\system32\\dxgi.dll", win_dir);
-	HMODULE real_dll = LoadLibraryA(dll_path);
-	if (real_dll == NULL){
-		LOG("%s: failed loaing dxgi.dll, 0x%x\n", __func__, GetLastError());
-		exit(1);
-	}
-	CreateDXGIFactory1_real = (HRESULT __stdcall (*)(REFIID riid, void **ppFactory))GetProcAddress(real_dll, "CreateDXGIFactory1");
-	if (CreateDXGIFactory1_real == NULL){
-		LOG("%s: failed fetching CreateDXGIFactory1\n", __func__);
-		exit(1);
-	}
+	dxgi_fetch_prog();
 
 	init_minhook();
 	hook_functions();
