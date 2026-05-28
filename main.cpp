@@ -16,6 +16,7 @@
 #include <wctype.h>
 
 #include <map>
+#include <mutex>
 
 #include "log.h"
 #include "dxgi_redirect.h"
@@ -79,17 +80,24 @@
 	LOG("%s: hooked %ls %s\n", __func__, mod_name, STR(name)); \
 }
 
+std::mutex xrGetVulkanDeviceExtensionsKHR_map_mutex;
 std::map<void *, void *> xrGetVulkanDeviceExtensionsKHR_map;
 
 // based on the findings of https://github.com/GloriousEggroll/proton-ge-custom/commit/a5a79f5b9d46fb3e02823d8653e91dd12496d3c7
 int WINAPI xrGetVulkanDeviceExtensionsKHR_hooked(void *instance, void *systemId, uint32_t bufferCapacityInput, uint32_t *bufferCountOutput, char *buffer){
+	xrGetVulkanDeviceExtensionsKHR_map_mutex.lock();
+
 	auto map_entry = xrGetVulkanDeviceExtensionsKHR_map.find(instance);
 	if (map_entry == xrGetVulkanDeviceExtensionsKHR_map.end()){
 		LOG("%s: xrGetVulkanDeviceExtensionsKHR for instance %p was never registered\n", __func__, instance);
 		exit(1);
 	}
+
 	int WINAPI (*xrGetVulkanDeviceExtensionsKHR_orig)(void *instance, void *systemId, uint32_t bufferCapacityInput, uint32_t *bufferCountOutput, char *buffer) = (int WINAPI (*)(void *instance, void *systemId, uint32_t bufferCapacityInput, uint32_t *bufferCountOutput, char *buffer))map_entry->second;
 	int result = xrGetVulkanDeviceExtensionsKHR_orig(instance, systemId, bufferCapacityInput, bufferCountOutput, buffer);
+
+	xrGetVulkanDeviceExtensionsKHR_map_mutex.unlock();
+
 	if (result == 0){
 		LOG("%s: xrGetVulkanDeviceExtensionsKHR returning no feature\n", __func__);
 		*bufferCountOutput = 0;
@@ -103,14 +111,32 @@ int WINAPI xrGetInstanceProcAddr_hooked(void *instance, const char *fn_name, voi
 	int result = xrGetInstanceProcAddr_orig(instance, fn_name, out_fn);
 	if (result == 0 && strcmp(fn_name, "xrGetVulkanDeviceExtensionsKHR") == 0){
 		LOG("%s: redirected xrGetInstanceProcAddr_orig for instance %p\n", __func__, instance);
+		xrGetVulkanDeviceExtensionsKHR_map_mutex.lock();
 		xrGetVulkanDeviceExtensionsKHR_map[instance] = *out_fn;
+		xrGetVulkanDeviceExtensionsKHR_map_mutex.unlock();
 		*out_fn = (void *)xrGetVulkanDeviceExtensionsKHR_hooked;
+	}
+	return result;
+}
+
+int WINAPI (*xrDestroyInstance_orig)(void *instance) = NULL;
+int WINAPI xrDestroyInstance_hooked(void *instance){
+	int result = xrDestroyInstance_orig(instance);
+	if (result == 0){
+		xrGetVulkanDeviceExtensionsKHR_map_mutex.lock();
+		auto map_entry = xrGetVulkanDeviceExtensionsKHR_map.find(instance);
+		if (map_entry != xrGetVulkanDeviceExtensionsKHR_map.end()){
+			LOG("%s: removing xrGetVulkanDeviceExtensionsKHR for instance %p\n", __func__, instance);
+			xrGetVulkanDeviceExtensionsKHR_map.erase(map_entry);
+		}
+		xrGetVulkanDeviceExtensionsKHR_map_mutex.unlock();
 	}
 	return result;
 }
 
 void hook_functions(){
 	HOOK_API2(L"openxr_loader.dll", xrGetInstanceProcAddr);
+	HOOK_API2(L"openxr_loader.dll", xrDestroyInstance);
 }
 
 void init_minhook(){

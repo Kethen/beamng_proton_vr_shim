@@ -30,6 +30,4 @@ jobs:
         path: |
            MinHook.x64.dll
            dxgi.dll
-           beamng_proton_vr_shim.asi
-           dinput8.dll
         if-no-files-found: error
